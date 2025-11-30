@@ -4,17 +4,22 @@
 let BG_COLOR = 0;                 
 let CONFIDENCE_THRESHOLD = 0.07;  
 let LINE_COLOR = '#00ff00';       
-let LINE_THICKNESS = 1.5          
+let LINE_THICKNESS = 2;         
 let DOT_COLOR = '#00ff00';        
-let DOT_SIZE = 20;                
+let DOT_SIZE = 25;                
 let TEXT_COLOR = '#ffffff';       
-let TEXT_SIZE_PX = 14;            
+let TEXT_SIZE_PX = 18;            
 let COORD_SCALE = 0.25;           
 let LABEL_GAP = 5;                
 // ----------------------
 
 // NEW: toggle for showing/hiding skeleton lines
 let showLines = true;
+
+// Reference width/height for scaling
+const REF_WIDTH = 1920;
+const REF_HEIGHT = 1080;
+let uiScale = 1;
 
 let video;
 let bodyPose;
@@ -37,6 +42,9 @@ function setup() {
 }
 
 function draw() {
+  // Compute UI scaling factor based on window size vs reference size
+  uiScale = Math.min(windowWidth / REF_WIDTH, windowHeight / REF_HEIGHT);
+
   background(BG_COLOR);
 
   push();
@@ -48,7 +56,7 @@ function draw() {
   // -----------------------
   // DRAW CONNECTION LINES
   // -----------------------
-  if (showLines) {   // ← NEW conditional
+  if (showLines) {
     for (let i = 0; i < poses.length; i++) {
       let pose = poses[i];
       for (let j = 0; j < connections.length; j++) {
@@ -66,14 +74,16 @@ function draw() {
 
         if (aConf > CONFIDENCE_THRESHOLD && bConf > CONFIDENCE_THRESHOLD && ax != null && bx != null) {
           stroke(LINE_COLOR);
-          strokeWeight(LINE_THICKNESS);
+          strokeWeight(LINE_THICKNESS * uiScale);
           line(ax, ay, bx, by);
         }
       }
     }
   }
 
-  // Draw dots
+  // -----------------------
+  // DRAW DOTS
+  // -----------------------
   for (let i = 0; i < poses.length; i++) {
     let pose = poses[i];
     for (let j = 0; j < pose.keypoints.length; j++) {
@@ -86,7 +96,7 @@ function draw() {
       if (kConf > CONFIDENCE_THRESHOLD && kx != null) {
         fill(DOT_COLOR);
         noStroke();
-        circle(kx, ky, DOT_SIZE);
+        circle(kx, ky, DOT_SIZE * uiScale);
       }
     }
   }
@@ -97,7 +107,7 @@ function draw() {
   // Draw coordinate labels
   // ----------------------------
   fill(TEXT_COLOR);
-  textSize(TEXT_SIZE_PX);
+  textSize(TEXT_SIZE_PX * uiScale);
   textAlign(LEFT, CENTER);
 
   for (let i = 0; i < poses.length; i++) {
@@ -113,7 +123,7 @@ function draw() {
         let screenX = width - rawX;
         let screenY = rawY;
 
-        let labelX = screenX + DOT_SIZE * 0.6 + LABEL_GAP;
+        let labelX = screenX + (DOT_SIZE * 0.6 + LABEL_GAP) * uiScale;
         let labelY = screenY;
 
         let scaledX = Math.round(screenX * COORD_SCALE);
@@ -121,14 +131,14 @@ function draw() {
 
         let labelText = `${scaledX}, ${scaledY}`;
         let textW = textWidth(labelText);
-        let textH = TEXT_SIZE_PX;
+        let textH = TEXT_SIZE_PX * uiScale;
 
-        let padX = 6;
-        let padY = 4;
+        let padX = 6 * uiScale;
+        let padY = 4 * uiScale;
 
         noFill();
         stroke(TEXT_COLOR);
-        strokeWeight(1);
+        strokeWeight(1 * uiScale);
         rect(labelX - padX / 2, labelY - textH / 2 - padY / 2, textW + padX, textH + padY);
 
         noStroke();
@@ -150,9 +160,8 @@ function windowResized() {
   }
 }
 
-
 // ----------------------------------
-// NEW: Press H → toggle lines on/off
+// Press H → toggle lines on/off
 // ----------------------------------
 function keyPressed() {
   if (key === 'h' || key === 'H') {
