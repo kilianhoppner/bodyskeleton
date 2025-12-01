@@ -2,15 +2,15 @@
 // Configurable (existing) variables
 // ----------------------
 let BG_COLOR = 0;                 
-let CONFIDENCE_THRESHOLD = 0.07;  
+let CONFIDENCE_THRESHOLD = 0.09;  
 let LINE_COLOR = '#00ff00';       
-let LINE_THICKNESS = 2;         
+let LINE_THICKNESS = 1.9;         
 let DOT_COLOR = '#00ff00';        
 let DOT_SIZE = 25;                
 let TEXT_COLOR = '#ffffff';       
 let TEXT_SIZE_PX = 18;            
 let COORD_SCALE = 0.25;           
-let LABEL_GAP = 5;                
+let LABEL_GAP = 7;                
 // ----------------------
 
 // toggle for showing/hiding skeleton lines
