@@ -1,5 +1,5 @@
 // ----------------------
-// Configurable (existing) variables moved to top
+// Configurable (existing) variables
 // ----------------------
 let BG_COLOR = 0;                 
 let CONFIDENCE_THRESHOLD = 0.07;  
@@ -13,11 +13,14 @@ let COORD_SCALE = 0.25;
 let LABEL_GAP = 5;                
 // ----------------------
 
-// NEW: toggle for showing/hiding skeleton lines
+// toggle for showing/hiding skeleton lines
 let showLines = true;
 
-// NEW: toggle for showing/hiding the webcam video
+// toggle for showing/hiding the webcam video (black by default)
 let showVideo = false;
+
+// NEW: toggle grid visibility
+let showGrid = false;
 
 // Reference width/height for scaling
 const REF_WIDTH = 1920;
@@ -33,6 +36,26 @@ let connections;
 let vidW = 640;
 let vidH = 480;
 
+
+// ----------------------------------
+// Draw Grid (mirrored inside video transform)
+// ----------------------------------
+function drawGrid() {
+  stroke(100);
+  strokeWeight(1 * uiScale);
+  noFill();
+
+  const spacing = 100 * uiScale;
+
+  for (let x = 0; x < width; x += spacing) {
+    line(x, 0, x, height);
+  }
+  for (let y = 0; y < height; y += spacing) {
+    line(0, y, width, y);
+  }
+}
+
+
 function preload() {
   bodyPose = ml5.bodyPose();
 }
@@ -40,7 +63,6 @@ function preload() {
 function setup() {
   createCanvas(windowWidth, windowHeight);
 
-  // createCapture with callback to capture intrinsic size when available
   video = createCapture(VIDEO, () => {
     if (video && video.elt) {
       vidW = video.elt.videoWidth || vidW;
@@ -53,81 +75,72 @@ function setup() {
   connections = bodyPose.getSkeleton();
 }
 
+
 function draw() {
-  // Compute UI scaling factor based on window size vs reference size
   uiScale = Math.min(windowWidth / REF_WIDTH, windowHeight / REF_HEIGHT);
 
   background(BG_COLOR);
 
-  // Figure out intrinsic video size each frame (in case it becomes available later)
   if (video && video.elt && video.elt.videoWidth && video.elt.videoHeight) {
     vidW = video.elt.videoWidth;
     vidH = video.elt.videoHeight;
   }
 
-  // ---------------------------------------------------------
-  // Compute cover-fit video draw rectangle (no warping)
-  // ---------------------------------------------------------
+  // Compute cover-fit rect
   const canvasAR = width / height;
   const videoAR = vidW / vidH || 1;
 
   let drawW, drawH, offsetX, offsetY;
   if (videoAR > canvasAR) {
-    // Video is wider than canvas -> fit height, crop sides
     drawH = height;
     drawW = height * videoAR;
   } else {
-    // Video is taller (or equal) -> fit width, crop top/bottom
     drawW = width;
     drawH = width / videoAR;
   }
   offsetX = (width - drawW) / 2;
   offsetY = (height - drawH) / 2;
 
-  // scale factors from video pixel space -> drawn canvas rectangle
   const sx = drawW / vidW;
   const sy = drawH / vidH;
 
+  // MIRRORED DRAW CONTEXT
   push();
   translate(width, 0);
   scale(-1, 1);
 
-  // -------------------------
-  // NEW: Only draw video if enabled
-  // -------------------------
+  // webcam or black
   if (showVideo) {
     image(video, offsetX, offsetY, drawW, drawH);
   } else {
-    // Fill the area where video would have been, to ensure full black
     fill(0);
     noStroke();
     rect(0, 0, width, height);
   }
 
-  // -----------------------
-  // DRAW CONNECTION LINES (mapped)
-  // -----------------------
+  // ---- draw grid if enabled ----
+  if (showGrid) {
+    drawGrid();
+  }
+
+  // ---- draw lines ----
   if (showLines) {
     for (let i = 0; i < poses.length; i++) {
       let pose = poses[i];
       for (let j = 0; j < connections.length; j++) {
-        let pointAIndex = connections[j][0];
-        let pointBIndex = connections[j][1];
-        let pointA = pose.keypoints[pointAIndex];
-        let pointB = pose.keypoints[pointBIndex];
+        let aIdx = connections[j][0];
+        let bIdx = connections[j][1];
+        let A = pose.keypoints[aIdx];
+        let B = pose.keypoints[bIdx];
 
-        // raw pose coordinates (video pixel space)
-        let rawAx = pointA.x ?? pointA.position?.x;
-        let rawAy = pointA.y ?? pointA.position?.y;
-        let rawBx = pointB.x ?? pointB.position?.x;
-        let rawBy = pointB.y ?? pointB.position?.y;
-        let aConf = pointA.confidence ?? pointA.score ?? 0;
-        let bConf = pointB.confidence ?? pointB.score ?? 0;
+        let rawAx = A.x ?? A.position?.x;
+        let rawAy = A.y ?? A.position?.y;
+        let rawBx = B.x ?? B.position?.x;
+        let rawBy = B.y ?? B.position?.y;
+        let aConf = A.confidence ?? A.score ?? 0;
+        let bConf = B.confidence ?? B.score ?? 0;
 
-        if (aConf > CONFIDENCE_THRESHOLD && bConf > CONFIDENCE_THRESHOLD &&
-            rawAx != null && rawAy != null && rawBx != null && rawBy != null) {
-
-          // map into drawn video rectangle (canvas pixel space)
+        if (aConf > CONFIDENCE_THRESHOLD && bConf > CONFIDENCE_THRESHOLD) {
           let ax = offsetX + rawAx * sx;
           let ay = offsetY + rawAy * sy;
           let bx = offsetX + rawBx * sx;
@@ -141,20 +154,17 @@ function draw() {
     }
   }
 
-  // -----------------------
-  // DRAW DOTS (mapped)
-  // -----------------------
+  // ---- draw dots ----
   for (let i = 0; i < poses.length; i++) {
     let pose = poses[i];
     for (let j = 0; j < pose.keypoints.length; j++) {
-      let keypoint = pose.keypoints[j];
+      let k = pose.keypoints[j];
 
-      let rawX = keypoint.x ?? keypoint.position?.x;
-      let rawY = keypoint.y ?? keypoint.position?.y;
-      let kConf = keypoint.confidence ?? keypoint.score ?? 0;
+      let rawX = k.x ?? k.position?.x;
+      let rawY = k.y ?? k.position?.y;
+      let kConf = k.confidence ?? k.score ?? 0;
 
-      if (kConf > CONFIDENCE_THRESHOLD && rawX != null && rawY != null) {
-        // mapped canvas coordinates (inside mirrored context)
+      if (kConf > CONFIDENCE_THRESHOLD) {
         let kx = offsetX + rawX * sx;
         let ky = offsetY + rawY * sy;
 
@@ -165,10 +175,11 @@ function draw() {
     }
   }
 
-  pop(); // restore normal coordinate system for upright text
+  pop(); // restore upright orientation
+
 
   // ----------------------------
-  // Draw coordinate labels (upright), using mapped coords
+  // coordinate label drawing
   // ----------------------------
   fill(TEXT_COLOR);
   textSize(TEXT_SIZE_PX * uiScale);
@@ -177,18 +188,16 @@ function draw() {
   for (let i = 0; i < poses.length; i++) {
     let pose = poses[i];
     for (let j = 0; j < pose.keypoints.length; j++) {
-      let keypoint = pose.keypoints[j];
+      let k = pose.keypoints[j];
 
-      let rawX = keypoint.x ?? keypoint.position?.x;
-      let rawY = keypoint.y ?? keypoint.position?.y;
-      let kConf = keypoint.confidence ?? keypoint.score ?? 0;
+      let rawX = k.x ?? k.position?.x;
+      let rawY = k.y ?? k.position?.y;
+      let kConf = k.confidence ?? k.score ?? 0;
 
-      if (kConf > CONFIDENCE_THRESHOLD && rawX != null && rawY != null) {
-        // mapped canvas coords (same as used above)
+      if (kConf > CONFIDENCE_THRESHOLD) {
         let mappedX = offsetX + rawX * sx;
         let mappedY = offsetY + rawY * sy;
 
-        // mirrored on-screen X where dot visually appears
         let screenX = width - mappedX;
         let screenY = mappedY;
 
@@ -218,6 +227,7 @@ function draw() {
   }
 }
 
+
 function gotPoses(results) {
   poses = results;
 }
@@ -225,6 +235,7 @@ function gotPoses(results) {
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
 }
+
 
 // ----------------------------------
 // toggle fullscreen on mouse click
@@ -238,6 +249,7 @@ function mouseClicked() {
   }, 60);
 }
 
+
 // ----------------------------------
 // keyboard shortcuts
 // ----------------------------------
@@ -246,8 +258,12 @@ function keyPressed() {
     showLines = !showLines;
   }
 
-  // NEW: toggle webcam visibility
   if (key === 'b' || key === 'B') {
     showVideo = !showVideo;
+  }
+
+  // NEW: toggle grid
+  if (key === 'g' || key === 'G') {
+    showGrid = !showGrid;
   }
 }
