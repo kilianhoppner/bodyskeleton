@@ -7,8 +7,8 @@ let LINE_COLOR = '#00ff00';
 let LINE_THICKNESS = 1.9;         
 let DOT_COLOR = '#00ff00';        
 let DOT_SIZE = 25;                
-let TEXT_COLOR = '#ffffff';       
-let TEXT_SIZE_PX = 18;            
+let TEXT_COLOR = '#4B4B4B';       
+let TEXT_SIZE_PX = 19;            
 let COORD_SCALE = 0.25;           
 let LABEL_GAP = 7;                
 // ----------------------
