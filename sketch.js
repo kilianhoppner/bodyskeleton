@@ -17,10 +17,7 @@ let LABEL_GAP = 7;
 let showLines = true;
 
 // toggle for showing/hiding the webcam video (black by default)
-let showVideo = false;
-
-// NEW: toggle grid visibility
-let showGrid = false;
+let showVideo = true;
 
 // Reference width/height for scaling
 const REF_WIDTH = 1920;
@@ -35,25 +32,6 @@ let connections;
 // Video intrinsic size
 let vidW = 640;
 let vidH = 480;
-
-
-// ----------------------------------
-// Draw Grid (mirrored inside video transform)
-// ----------------------------------
-function drawGrid() {
-  stroke(100);
-  strokeWeight(1 * uiScale);
-  noFill();
-
-  const spacing = 100 * uiScale;
-
-  for (let x = 0; x < width; x += spacing) {
-    line(x, 0, x, height);
-  }
-  for (let y = 0; y < height; y += spacing) {
-    line(0, y, width, y);
-  }
-}
 
 
 function preload() {
@@ -116,11 +94,6 @@ function draw() {
     fill(0);
     noStroke();
     rect(0, 0, width, height);
-  }
-
-  // ---- draw grid if enabled ----
-  if (showGrid) {
-    drawGrid();
   }
 
   // ---- draw lines ----
@@ -260,10 +233,5 @@ function keyPressed() {
 
   if (key === 'b' || key === 'B') {
     showVideo = !showVideo;
-  }
-
-  // NEW: toggle grid
-  if (key === 'g' || key === 'G') {
-    showGrid = !showGrid;
   }
 }
